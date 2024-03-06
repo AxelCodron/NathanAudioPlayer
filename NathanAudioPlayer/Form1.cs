@@ -15,7 +15,6 @@ namespace NathanAudioPlayer
         private readonly FileSystemWatcher Watcher = new FileSystemWatcher();
         private bool stop = false;
         private bool skip = false;
-        private decimal waitTime = 0;
 
         public Form1()
         {
@@ -58,8 +57,30 @@ namespace NathanAudioPlayer
             folderBrowserDialog1.ShowDialog();
             if (Directory.Exists(folderBrowserDialog1.SelectedPath))
             {
-                DirectoryPath = folderBrowserDialog1.SelectedPath;
+                /// Enabling plural applications to read the same folder.
+                string directoryName = folderBrowserDialog1.SelectedPath.Split('\\').Last();
+                if (Directory.Exists(directoryName))
+                {
+                    for (int i = 1; i < 100; i++)
+                    {
+                        if (!Directory.Exists(directoryName + i))
+                        {
+                            Directory.CreateDirectory(directoryName + i);
+                            DirectoryPath = directoryName + i;
+                            break;
+                        }
+                    }
+                }
+                else
+                {
+                    Directory.CreateDirectory(directoryName);
+                    DirectoryPath = directoryName;
+                }
                 Watcher.Path = DirectoryPath;
+                foreach (string file in Directory.GetFiles(folderBrowserDialog1.SelectedPath))
+                {
+                    File.Copy(file, DirectoryPath + "\\" + file.Split('\\').Last());
+                }
 
                 if (Directory.Exists(DirectoryPath))
                 {
@@ -143,6 +164,7 @@ namespace NathanAudioPlayer
             while (!stop)
             {
                 string[] files = Directory.GetFiles(DirectoryPath);
+
                 /// Randomization
                 if (isRandomCheckBox.Checked)
                 {
@@ -154,6 +176,7 @@ namespace NathanAudioPlayer
                         (files[k], files[n]) = (files[n], files[k]);
                     }
                 }
+
                 foreach (string record in files)
                 {
                     if (File.Exists(record))
@@ -224,12 +247,13 @@ namespace NathanAudioPlayer
                         }
                         DisplayLabel.Invoke((MethodInvoker)delegate
                         {
-                            DisplayLabel.Text = $"Waiting {waitTime} seconds before next recording...";
+                            DisplayLabel.Text = $"Waiting {numericUpDown.Value} seconds before next recording...";
                         });
-                        Thread.Sleep((int)waitTime * 1000);
+                        Thread.Sleep((int)numericUpDown.Value * 1000);
                     }
                 }
             }
+
             stop = false;
         }
 
@@ -295,7 +319,12 @@ namespace NathanAudioPlayer
 
         private void numericUpDown_ValueChanged(object sender, EventArgs e)
         {
-            waitTime = numericUpDown.Value;
+        }
+
+        private void Form1_FormClosed(object sender, FormClosedEventArgs e)
+        {
+            // TODO
+            // Directory.Delete(DirectoryPath, true);
         }
     }
 }
